@@ -45,10 +45,11 @@ export default function CopyLink() {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={updateLink}>
                     <Share2 className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
+
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Share link</DialogTitle>

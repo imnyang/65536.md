@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { encode, decode } from "base65536";
+import debounce from "lodash.debounce";
 import pako from "pako";
 
 import "@blocknote/core/fonts/inter.css";
@@ -47,30 +48,33 @@ export default function App() {
     loadContentFromURL();
   }, [editor]);
 
-  const handleChange = async () => {
-    if (!editor) return;
+  // useCallback을 사용해 debounce 유지
+  const debouncedHandleChange = useCallback(
+    debounce(async () => {
+      if (!editor) return;
 
-    const newContentMarkdown = await editor.blocksToMarkdownLossy(
-      editor.topLevelBlocks
-    );
-    setContentForURL(newContentMarkdown);
+      const newContentMarkdown = await editor.blocksToMarkdownLossy(
+        editor.topLevelBlocks
+      );
+      setContentForURL(newContentMarkdown);
 
-    const encoder = new TextEncoder();
-    let encodedString: string;
+      const encoder = new TextEncoder();
+      let encodedString: string;
 
-    if (newContentMarkdown.length >= 40) {
-      const encodedBytes = encoder.encode(newContentMarkdown);
-      const compressed = pako.gzip(encodedBytes);
-      encodedString = encode(compressed); // 압축 + 인코딩
-    } else {
-      const plainBytes = encoder.encode(newContentMarkdown);
-      encodedString = encode(plainBytes); // 압축 없이 인코딩
-    }
+      if (newContentMarkdown.length >= 40) {
+        const encodedBytes = encoder.encode(newContentMarkdown);
+        const compressed = pako.gzip(encodedBytes);
+        encodedString = encode(compressed);
+      } else {
+        const plainBytes = encoder.encode(newContentMarkdown);
+        encodedString = encode(plainBytes);
+      }
 
-    const newUrl = `${window.location.pathname}?c=${encodedString}`;
-    window.history.replaceState({}, "", newUrl);
-    window.dispatchEvent(new Event("url-changed"));
-  };
+      const newUrl = `${window.location.pathname}?c=${encodedString}`;
+      window.history.replaceState({}, "", newUrl);
+    }, 250), [editor] // 500ms 대기
+  );
+
 
   return (
     <main className="flex flex-col w-full h-screen">
@@ -86,7 +90,7 @@ export default function App() {
       <div id="editor-container" className="w-full p-4 h-full max-h-screen">
         <BlockNoteView
           editor={editor}
-          onChange={handleChange}
+          onChange={debouncedHandleChange}
           className="w-full h-full"
         />
       </div>
